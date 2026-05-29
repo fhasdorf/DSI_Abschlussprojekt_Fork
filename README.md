@@ -1,4 +1,9 @@
-# Ozonparadoxon – Wetter- und Luftqualitätsanalyse Nürnberg
+## Ozonbildung unter dem Einfluss von Klima und Verkehr
+* Eine Langzeitanalyse für den Großraum Nürnberg mit Fokus auf das Ozon-Paradoxon (Stadt vs. Land, Messstellenvergleich)
+##### Autor: Frank Hasdorf
+
+### Dieses Projekt entstand als Abschlussarbeit der Data-Science-Fortbildung am Data Science Institute Berlin. 
+#### Ein herzlicher Dank gilt dem Institut für die fundierte Ausbildung, die das nötige Rüstzeug für dieses Projekt vermittelt hat – von der Datenaufbereitung über die Korrelations- und Regressionsanalyse bis hin zum Einsatz des Random Forest. ####
 
 [![Streamlit App]()]()
 
@@ -25,6 +30,6 @@ Python · Streamlit · pandas · matplotlib · Apache Parquet
 ## Starten
 
 ```bash
-pip install -r requirements-frozen.txt
+pip install -r requirements.txt
 streamlit run app.py
 ```

@@ -37,34 +37,6 @@ st.set_page_config(
 # ============================================================
 # 01.a PROJEKT-HEADER (ersetzt die frühere Sidebar)
 # ============================================================
-st.markdown(
-    """
-    <div style="background-color: rgba(3, 149, 176, 0.08); padding: 14px 20px;
-                border-radius: 0.5rem; border-left: 4px solid rgba(3, 149, 176, 0.9);
-                margin-bottom: 18px;">
-        <b style="font-size: 22px; color: #FAFAFA;">
-            Thema: Ozonbildung unter dem Einfluss von Klima und Verkehr
-        </b><br>
-        <span style="font-size: 16px; color: #FAFAFA;">
-            Eine Langzeitanalyse für den Großraum Nürnberg mit Fokus auf das Ozon-Paradoxon (Stadt vs. Land, Messstellenvergleich)
-        </span><br>
-        <span style="font-size: 13px; color: #FAFAFA;">
-            Autor: Frank Hasdorf
-        </span>
-        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08);
-                    margin-top: 10px; padding-top: 8px;">
-            <span style="font-size: 14px; color: #FAFAFA; font-style: italic; line-height: 1.5;">
-                Dieses Projekt entstand als Abschlussarbeit der Data-Science-Fortbildung
-                am Data Science Institute Berlin. Ein herzlicher Dank gilt dem Institut
-                für die fundierte Ausbildung, die das nötige Rüstzeug für dieses Projekt
-                vermittelt hat – von der Datenaufbereitung über die Korrelations- und
-                Regressionsanalyse bis hin zum Einsatz des Random Forest.
-            </span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 # ============================================================
@@ -880,7 +852,6 @@ def showTab9():
             "Bitte die Markdown-Datei ins Projekt-Root legen (neben app.py)."
         )
 
-
 # ============================================================
 # 04 DATEN LADEN
 # ============================================================
@@ -911,3 +882,36 @@ with tab6: showTab6()
 with tab7: showTab7()
 with tab8: showTab8()
 with tab9: showTab9()
+
+
+# ============================================================
+# 06 PROJEKT-FOOTER (Titel + Danksagung)
+# ============================================================
+st.markdown(
+    """
+    <div style="background-color: rgba(3, 149, 176, 0.08); padding: 14px 20px;
+                border-radius: 0.5rem; border-left: 4px solid rgba(3, 149, 176, 0.9);
+                margin-top: 32px;">
+        <b style="font-size: 22px; color: #FAFAFA;">
+            Thema: Ozonbildung unter dem Einfluss von Klima und Verkehr
+        </b><br>
+        <span style="font-size: 16px; color: #FAFAFA;">
+            Eine Langzeitanalyse für den Großraum Nürnberg mit Fokus auf das Ozon-Paradoxon (Stadt vs. Land, Messstellenvergleich)
+        </span><br>
+        <span style="font-size: 13px; color: #FAFAFA;">
+            Autor: Frank Hasdorf
+        </span>
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08);
+                    margin-top: 10px; padding-top: 8px;">
+            <span style="font-size: 14px; color: #FAFAFA; font-style: italic; line-height: 1.5;">
+                Dieses Projekt entstand als Abschlussarbeit der Data-Science-Fortbildung
+                am Data Science Institute Berlin. Ein herzlicher Dank gilt dem Institut
+                für die fundierte Ausbildung, die das nötige Rüstzeug für dieses Projekt
+                vermittelt hat – von der Datenaufbereitung über die Korrelations- und
+                Regressionsanalyse bis hin zum Einsatz des Random Forest.
+            </span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
