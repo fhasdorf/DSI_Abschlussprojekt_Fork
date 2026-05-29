@@ -156,8 +156,11 @@ def train_random_forest(_df: pd.DataFrame) -> dict:
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
     # Random Forest (nichtlinear)
+    # Hinweis: n_jobs=1 statt -1, da Streamlit Community Cloud nur ~1 GB RAM
+    # bietet. Parallele Worker (n_jobs=-1) halten je eine Datenkopie und
+    # sprengen das Limit -> Prozess wird gekillt ("Oh no. Error running app").
     rf = RandomForestRegressor(
-        n_estimators=100, max_depth=18, n_jobs=-1, random_state=42
+        n_estimators=60, max_depth=12, n_jobs=1, random_state=42
     )
     rf.fit(X_train, y_train)
     y_pred_rf = rf.predict(X_test)
@@ -171,8 +174,9 @@ def train_random_forest(_df: pd.DataFrame) -> dict:
     r2_ols = r2_score(y_test, ols.predict(X_test))
 
     # Permutation Importance auf den Testdaten (robuster als Gini-Importance)
+    # n_jobs=1 + reduzierte n_repeats aus demselben RAM-Grund wie oben.
     perm = permutation_importance(
-        rf, X_test, y_test, n_repeats=10, random_state=42, n_jobs=-1
+        rf, X_test, y_test, n_repeats=5, random_state=42, n_jobs=1
     )
     importances = pd.Series(
         perm.importances_mean, index=features
