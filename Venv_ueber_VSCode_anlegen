@@ -1,0 +1,14 @@
+# 1. venv anlegen (Name passt zur bestehenden Doku: dsi_env)
+python -m venv dsi_env
+
+# 2. Aktivieren
+.\dsi_env\Scripts\Activate.ps1
+
+# 3. pip aktualisieren
+python -m pip install --upgrade pip
+
+# 4. Pakete installieren
+pip install pandas streamlit matplotlib seaborn pyarrow numpy cycler requests requests_cache retry_requests
+
+# 5. requirements.txt schreiben
+pip freeze > requirements.txt

@@ -1,0 +1,25 @@
+# ============================================================
+# Streamlit-Dashboard – Schadstoff/Wetter-Korrelation Nürnberg
+# ============================================================
+
+# --- Dashboard & UI ---
+streamlit>=1.36
+
+# --- Datenverarbeitung ---
+pandas>=2.2
+pyarrow>=15.0          # Parquet-Engine (von pandas implizit genutzt)
+
+# --- Visualisierung ---
+matplotlib>=3.8
+seaborn>=0.13
+cycler>=0.12           # Farbzyklus in styling.py
+
+# --- News-Tab ---
+feedparser>=6.0        # RSS-Feeds (UBA, EEA, EU CLIMA, Copernicus)
+
+# --- Notebook-/API-Abfrage (nur für scripts/) ---
+jupyter>=1.0
+requests>=2.31
+requests-cache>=1.2    # Cache der Open-Meteo-API-Antworten
+retry-requests>=2.0    # Retry-Logik für Open-Meteo-API
+numpy>=1.26            # in Notebooks für Korrelationsmatrix

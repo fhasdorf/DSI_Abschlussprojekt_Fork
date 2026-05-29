@@ -1,0 +1,7 @@
+[theme]
+base = "dark"
+primaryColor = "#03B5B0"              # dein Türkis aus COLORS["accent"]
+backgroundColor = "#0E1117"            # COLORS["background"]
+secondaryBackgroundColor = "#262730"   # COLORS["surface"] - Sidebar
+textColor = "#FAFAFA"                  # COLORS["text"]
+font = "sans serif"

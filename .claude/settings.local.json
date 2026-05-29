@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\fhasd\\\\OneDrive\\\\Desktop\\\\Abschlussprojekt_Ozon\" -Depth 6 -Recurse | Where-Object { $_.FullName -notmatch \"node_modules|\\\\.git|\\\\.venv|venv|__pycache__|dist|build|\\\\.next|\\\\.cache|coverage|\\\\.pytest_cache|\\\\.mypy_cache|\\\\.lock\" } | ForEach-Object { $_.FullName.Replace\\(\"c:\\\\Users\\\\fhasd\\\\OneDrive\\\\Desktop\\\\Abschlussprojekt_Ozon\\\\\", \"\"\\) + $\\(if \\($_.PSIsContainer\\) { \"\\\\\" } else { \"\" }\\) } | Sort-Object)",
+      "Bash(dir \"c:\\\\Users\\\\fhasd\\\\OneDrive\\\\Desktop\\\\Abschlussprojekt_Ozon\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\(r'c:\\\\Users\\\\fhasd\\\\OneDrive\\\\Desktop\\\\Abschlussprojekt_Ozon\\\\src\\\\fh_df_info.ipynb'\\)\\); [print\\(c['source']\\) for c in nb['cells'] if c['cell_type']=='code']\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\(r'c:\\\\Users\\\\fhasd\\\\OneDrive\\\\Desktop\\\\Abschlussprojekt_Ozon\\\\src\\\\fh_chart_hitzetage_1980_2023.ipynb'\\)\\); [print\\('---CELL---'\\); print\\(c['source']\\) for c in nb['cells'] if c['cell_type']=='code']\")",
+      "Bash(python -c ' *)",
+      "Bash(\"dsi_env/Scripts/pip.exe\" freeze *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('app.py: Syntax OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('src/visualization/charts_ozon.py', encoding='utf-8'\\).read\\(\\)\\); print\\('charts_ozon.py: Syntax OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('src/etl/convert_to_parquet.py', encoding='utf-8'\\).read\\(\\)\\); print\\('convert_to_parquet.py: Syntax OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('src/utils/paths.py', encoding='utf-8'\\).read\\(\\)\\); print\\('paths.py: Syntax OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('src/utils/styling.py', encoding='utf-8'\\).read\\(\\)\\); print\\('styling.py: Syntax OK'\\)\")",
+      "Bash(grep -rn \"scripts/\" app.py src/ news.py)",
+      "Bash(grep -rn \"^import styling\\\\|^from styling \" app.py src/)",
+      "Bash(grep -rn '\"data/data\\\\.' app.py src/)",
+      "Bash(python -)"
+    ]
+  }
+}
