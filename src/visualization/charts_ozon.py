@@ -499,61 +499,75 @@ def titration_wettergematcht(
     df_merged = _baue_titrationsdaten(df_stadt, df_land)
     return _titration_zweitageplot(df_merged, tage)
 
-def korrelationsmatrix_vergleich(df: pd.DataFrame) -> plt.Figure:
+def korrelationsmatrix_ganzjahr_vs_sommer(df: pd.DataFrame) -> plt.Figure:
     """
-    Zeichnet zwei Korrelations-Heatmaps nebeneinander (Spearman | Pearson)
-    für die wichtigsten Wetter- und Schadstoffvariablen.
+    Zeichnet zwei Spearman-Korrelations-Heatmaps nebeneinander:
+      - links:  gesamtes Jahr (alle Monate)   – "Rohbild"
+      - rechts: nur Sommer (Jun/Jul/Aug)        – photochemisches Regime
 
-    Spearman ist die Hauptaussage (robust gegen Ausreißer, erfasst monotone
-    nichtlineare Zusammenhänge). Pearson dient dem didaktischen Vergleich:
-    Wo beide stark auseinanderlaufen, ist der Zusammenhang nichtlinear.
+    Methodischer Hintergrund
+    ------------------------
+    Beide Panels nutzen Spearman (robust gegen Ausreißer, erfasst monotone
+    nichtlineare Zusammenhänge). Variiert wird hier NICHT die Methode, sondern
+    der Zeitausschnitt. Der Sommerfilter entfernt die *Saison-Achse* (Winter-NO₂-
+    Spitzen durch Inversionswetterlagen vs. Sommer-O₃-Peaks) und legt damit die
+    photochemische Dynamik freier. Die DIFFERENZ beider Matrizen ist die
+    eigentliche Aussage: Verschärft sich z. B. O₃↔Temperatur im Sommer, wird
+    der Saisoneffekt sichtbar.
+
+    WICHTIG: Der Sommerfilter beseitigt NUR die Saison-Achse. Tagesgang
+    (Titration) und Langzeittrend (Klimawandel) stecken weiterhin in den rohen
+    Stundenwerten – die Sommer-Matrix ist also kein "neutraler", sondern ein
+    *bedingter* Ausschnitt (Bedingung: Sommerregime).
 
     Args:
-        df: DataFrame mit den Stundenwerten aus data.parquet.
+        df: DataFrame mit den Stundenwerten aus data.parquet (Spalte ``datum``
+            als datetime64 wird zum Filtern benötigt).
 
     Returns:
         matplotlib.figure.Figure mit zwei nebeneinanderliegenden Heatmaps.
     """
-    # Variablen-Auswahl (erweitert: O3-Fokus + Schadstoffe)
     spalten = [
         "o3",
         "no2",
-        "pm10",
         "temperatur",
         "relative_luftfeuchtigkeit",
         "sonnenscheindauer_minuten",
         "windgeschwindigkeit",
         "luftdruck",
-        "gesamtbewoelkung",
     ]
-    # Nur tatsächlich vorhandene Spalten verwenden (defensiv)
-    spalten = [c for c in spalten if c in df.columns]
+    spalten = [c for c in spalten if c in df.columns]  # defensiv
 
-    # Sprechende Achsenbeschriftungen
     labels = {
         "o3": "Ozon (O₃)",
         "no2": "Stickstoffdioxid (NO₂)",
-        "pm10": "Feinstaub (PM10)",
         "temperatur": "Temperatur",
         "relative_luftfeuchtigkeit": "Rel. Luftfeuchte",
         "sonnenscheindauer_minuten": "Sonnenscheindauer",
         "windgeschwindigkeit": "Windgeschwindigkeit",
         "luftdruck": "Luftdruck",
-        "gesamtbewoelkung": "Gesamtbewölkung",
     }
-
-    daten = df[spalten]
-    corr_spearman = daten.corr(method="spearman")
-    corr_pearson = daten.corr(method="pearson")
-
     anzeige_labels = [labels.get(c, c) for c in spalten]
+
+    # --- Zeitausschnitte: ganzes Jahr vs. nur Sommer (meteorologisch Jun–Aug) ---
+    df_jahr   = df
+    df_sommer = df[df["datum"].dt.month.isin([6, 7, 8])]
+
+    corr_jahr   = df_jahr[spalten].corr(method="spearman")
+    corr_sommer = df_sommer[spalten].corr(method="spearman")
+
+    # Stichprobengröße (vollständige O₃-Stunden) – fürs Verteidigen der Panels
+    n_jahr   = int(df_jahr["o3"].notna().sum())
+    n_sommer = int(df_sommer["o3"].notna().sum())
 
     fig, axes = plt.subplots(1, 2, figsize=(18, 8))
 
-    for ax, corr, titel in [
-        (axes[0], corr_spearman, "Spearman (empfohlen)"),
-        (axes[1], corr_pearson, "Pearson (linearer Vergleich)"),
-    ]:
+    panels = [
+        (axes[0], corr_jahr,   f"Gesamtes Jahr  (n = {n_jahr:,} h)"),
+        (axes[1], corr_sommer, f"Nur Sommer · Jun–Aug  (n = {n_sommer:,} h)"),
+    ]
+
+    for ax, corr, titel in panels:
         im = ax.imshow(corr, cmap="coolwarm", vmin=-1, vmax=1, aspect="auto")
 
         ax.set_xticks(range(len(spalten)))
@@ -561,25 +575,48 @@ def korrelationsmatrix_vergleich(df: pd.DataFrame) -> plt.Figure:
         ax.set_xticklabels(anzeige_labels, rotation=45, ha="right", fontsize=10)
         ax.set_yticklabels(anzeige_labels, fontsize=10)
 
-        # Werte in die Zellen schreiben
         for i in range(len(spalten)):
             for j in range(len(spalten)):
                 wert = corr.iloc[i, j]
-                # Textfarbe je nach Hintergrundhelligkeit
                 farbe = COLORS["text"] if abs(wert) < 0.5 else "#ffffff"
-                ax.text(
-                    j, i, f"{wert:.2f}",
-                    ha="center", va="center",
-                    fontsize=9, color=farbe,
-                )
+                ax.text(j, i, f"{wert:.2f}", ha="center", va="center",
+                        fontsize=9, color=farbe)
 
         ax.set_title(titel, fontsize=14, fontweight="bold", pad=12)
         cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         cbar.ax.tick_params(labelsize=9)
 
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.suptitle(
+        "Spearman-Korrelation: Gesamtes Jahr vs. Sommerregime\n"
+        "Gleiche Methode, anderer Zeitausschnitt – der Unterschied ist der Saisoneffekt",
+        fontsize=15, fontweight="bold",
+    )
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
 
     return fig
+
+def langzeit_korrelation_jahresmittel(df: pd.DataFrame) -> pd.Series:
+    """
+    Spearman-Korrelation auf JAHRESMITTELN gegen die Zeitachse 'jahr'.
+
+    Durch die Aggregation auf Jahresebene fallen Tagesgang und Saison weg –
+    der Langzeittrend tritt damit als EINZELNE Zahl hervor. Die Stundenmatrix
+    kann das prinzipiell nicht, weil sie keine Zeitachse besitzt und von der
+    Tag/Saison-Varianz dominiert wird.
+
+    Hinweis: Basiert auf ~45 Jahrespunkten – das ist für eine Trendaussage
+    angemessen (monotone Richtung über die Jahre), aber bewusst eine andere
+    Aggregationsebene als die Stundenmatrix.
+    """
+    jahres = (
+        df.assign(jahr=df["datum"].dt.year)
+          .groupby("jahr")[["o3", "no2", "temperatur"]]
+          .mean()
+    )
+    jahres["jahr"] = jahres.index
+    corr = jahres.corr(method="spearman")["jahr"].drop("jahr")
+    return corr.rename("Spearman-Korrelation mit dem Jahr (Langzeittrend)")
+
 
 def ols_modellvergleich(df: pd.DataFrame) -> tuple[plt.Figure, pd.DataFrame]:
     """

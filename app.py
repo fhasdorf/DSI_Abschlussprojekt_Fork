@@ -603,22 +603,8 @@ def showTab5() -> None:
         "prüfen möchte. Bei großen Zeitreihen (wie UBA/LfU-Daten) liefern Spearman "
         "und Kendall meist ähnliche Erkenntnisse, wobei Spearman rechnerisch effizienter ist."
     )
-
     st.markdown("---")
-    st.markdown("#### Korrelationsmatrix der Variablen")
-    st.write("Korrelationsmatrix: Wetter- und Schadstoffvariablen (Nürnberg, 1980–2024)\n"
-        "Spearman erfasst monotone, auch nichtlineare Zusammenhänge – Pearson nur lineare",
-    )
-
-    st.info(
-        "Die folgende Matrix zeigt links die **Spearman**-Korrelationen (Hauptaussage) "
-        "und rechts zum Vergleich **Pearson**. Werte nahe +1 oder −1 "
-        "bedeuten starke Zusammenhänge, Werte nahe 0 keine. Aufschlussreich sind "
-        "die Stellen, an denen sich beide Matrizen unterscheiden: Dort verläuft der "
-        "Zusammenhang nichtlinear – genau das, was bei der Ozonbildung zu erwarten ist."
-    )
-
-    fig = co.korrelationsmatrix_vergleich(dfOrginal)
+    fig = co.korrelationsmatrix_ganzjahr_vs_sommer(dfOrginal)
     st.pyplot(fig)
 
     with st.expander("Wie ist die Matrix zu lesen?"):
@@ -632,6 +618,66 @@ def showTab5() -> None:
             "ist der Zusammenhang monoton, aber nicht linear."
         )
 
+    st.markdown("##### Langzeittrend als Korrelationszahl (Jahresmittel)")
+    st.table(co.langzeit_korrelation_jahresmittel(dfOrginal).round(2))
+
+   
+    with st.expander("ℹ️ Methodische Einordnung: Was eine Korrelationszahl hier (nicht) sagt"):
+        st.markdown("""
+        Eine Korrelation über rohe Stundenwerte von 1980–2024 wirkt wie *eine* Zahl,
+        vermischt aber **drei Zusammenhänge auf unterschiedlichen Zeitskalen** zu
+        einem einzigen Koeffizienten:
+
+        - **Tagesskala (Stunde zu Stunde):** der Titrationseffekt – morgens hohes NO₂
+        aus dem Verkehr, gleichzeitig niedriges O₃.
+        - **Saisonskala (Monat zu Monat):** Sommer-Ozon (Sonne, Hitze) gegen
+        Winter-NO₂ (Heizung, Inversionswetterlagen).
+        - **Langzeitskala (Jahr zu Jahr):** sinkendes NO₂ (Filter, Abgasnormen,
+        Umweltzonen) gegen steigendes O₃ (Klimawandel).
+
+        **Was kann eine einzelne Zahl dabei täuschen?**
+
+        - **Die Varianz dominiert die Zahl.** Tagesgang und Saison schwanken stark,
+        der Klimatrend driftet nur sanft über Jahrzehnte. In den ~394.000 Stunden
+        ist die Klimadrift gegenüber dem täglichen Auf und Ab fast unsichtbar – die
+        gepoolte Zahl spiegelt also v. a. *Wetter*, kaum *Klima*.
+        - **Korrelation ist immer bedingt.** Es gibt keine „neutrale" Korrelation, die
+        man nur dokumentiert. Jede Zahl gilt für genau die Teilmenge, über die sie
+        gerechnet wird. Ein Sommer-Ausschnitt ist daher keine *Bereinigung*, sondern
+        eine *Bedingung*: „Wie kovariieren die Größen **im Sommer**?"
+        - **Korrelation ≠ Kausalität.** Die negative O₃↔NO₂-Beziehung *sieht* aus wie
+        „NO₂ senkt O₃", ist aber das statistische Echo eines chemischen Prozesses
+        (Titration) plus räumlicher Verteilung (Stadt/Land). Das Muster zeigt die
+        Matrix – die Ursache liefert die Chemie.
+
+        **Was der Sommerfilter leistet (und was nicht):** Er entfernt die
+        **Saison-Achse** und beantwortet gezielt die Frage, wie die Größen *innerhalb
+        des Sommerregimes* kovariieren. Tagesgang und Langzeittrend bleiben dabei in
+        den Stundenwerten enthalten. Wichtig: Die Sommer-Koeffizienten werden dadurch
+        oft **kleiner**, nicht größer – z. B. O₃↔Sonnenscheindauer von 0,37 (Jahr) auf
+        0,27 (Sommer). Das ist kein Widerspruch zur Photochemie, sondern
+        **Varianzeinschränkung**: Im Sommer sind Sonne und Ozon ohnehin durchweg hoch,
+        der Wertebereich ist schmal – und ein schmaler Wertebereich senkt den
+        Koeffizienten, obwohl der physikalische Zusammenhang derselbe bleibt. Der
+        Rückgang misst damit direkt, **wie viel die Saison-Achse zu diesem Paar
+        beigetragen hat**. Der Unterschied beider Matrizen ist also selbst die Aussage –
+        richtungsneutral gelesen: er zeigt den Saisonbeitrag, mal verstärkend, meist
+        dämpfend.
+
+        **Und der Klimatrend?** Den kann diese Matrix **prinzipiell nicht zeigen**, weil
+        sie keine Zeitachse enthält – es gibt keine Zelle, die „Jahr zu Jahr" abbilden
+        könnte. Die O₃↔Temperatur-Zelle wirkt zwar wie ein Klimasignal, entsteht aber
+        fast vollständig aus Tag- und Saison-Kovariation (warme Nachmittage ↔ viel
+        Ozon, *jetzt*), nicht aus der Erwärmung über 44 Jahre. Sichtbar wird der Trend
+        erst auf **Jahresmittel-Ebene** (siehe Tabelle oben bzw. Tab „Explorative
+        Analyse"): Dort fallen Tagesgang und Saison weg, und O₃ wie Temperatur zeigen
+        eine klar positive, NO₂ eine klar negative Korrelation mit der Zeit.
+
+        **Fazit:** Die Matrix ist ein **Diagnose- und Hypothesen-Werkzeug**, kein
+        Beweis. Sie zeigt, *wo* Zusammenhänge bestehen und auf welcher Zeitebene sie
+        entstehen – nicht *warum*. Genau hier setzen die folgenden Tabs (Regression,
+        Random Forest) an, um Wirkrichtung und Nichtlinearität zu prüfen.
+        """)
 
 @st.fragment
 def showTab6() -> None:
