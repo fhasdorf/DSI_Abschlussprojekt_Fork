@@ -485,6 +485,143 @@ def showTab3():
             )
 
 
+
+    # ============================================================
+    # Korrelationsstruktur & Langzeittrend
+    # (verschoben aus dem früheren Tab „Korrelationsanalyse")
+    # ============================================================
+    st.markdown("---")
+    st.subheader("Korrelationsstruktur und Langzeittrend")
+    st.write(
+        "Die Liniencharts oben zeigen die Entwicklung *über die Zeit*. Ergänzend "
+        "dazu fasst die folgende Korrelationsanalyse zusammen, *wie* die Wetter- "
+        "und Schadstoffgrößen zusammenhängen – und auf welcher Zeitebene diese "
+        "Zusammenhänge entstehen."
+    )
+
+    with st.expander("Methodenwahl: Pearson, Spearman oder Kendall?"):
+        df_methoden = pd.DataFrame(
+            {
+                "Methode": ["Pearson", "Spearman", "Kendall"],
+                "Eignung & Charakteristik": [
+                    "Klassisch; setzt lineare Zusammenhänge und normalverteilte Daten voraus.",
+                    "Empfohlen: Robust gegen Ausreißer; erkennt auch nichtlineare, monotone Trends.",
+                    "Konservativ; sehr zuverlässig bei kleinen Stichproben oder vielen gleichen Werten.",
+                ],
+                "Fokus": [
+                    "Stärke des linearen Zusammenhangs.",
+                    "Stärke der Rangfolge-Beziehung.",
+                    "Konkordanz von Datenpaaren.",
+                ],
+            }
+        )
+        st.table(df_methoden.set_index("Methode"))
+
+        st.markdown(
+            "**Pearson:** Dieses Modell misst, wie stark sich zwei Variablen linear zueinander "
+            "verhalten. Da atmosphärische Daten jedoch häufig durch extreme Spitzenwerte "
+            "(z. B. Rushhour-Emissionen) geprägt sind, kann Pearson hier leicht zu verfälschten "
+            "Ergebnissen führen, wenn die Daten nicht strikt normalverteilt sind."
+        )
+
+        st.markdown(
+            "**Spearman:** Anstatt absolute Werte zu nutzen, arbeitet Spearman mit Rängen. Das "
+            "macht das Modell extrem robust gegenüber Ausreißern. Da chemische Prozesse in der "
+            "Atmosphäre (wie die Ozonbildung) oft nicht linear verlaufen, sondern bei bestimmten "
+            "Schwellenwerten sättigen, erfasst Spearman diese dynamischen Zusammenhänge deutlich "
+            "präziser."
+        )
+
+        st.markdown(
+            "**Kendall:** Kendall ist die statistisch „strengere\" Variante. Sie ist besonders "
+            "dann nützlich, wenn man die Konsistenz der Zusammenhänge in sehr kleinen Datensätzen "
+            "prüfen möchte. Bei großen Zeitreihen (wie UBA/LfU-Daten) liefern Spearman "
+            "und Kendall meist ähnliche Erkenntnisse, wobei Spearman rechnerisch effizienter ist."
+        )
+
+    st.markdown("##### Korrelationsmatrix: gesamtes Jahr vs. Sommerregime")
+    st.write(
+        "Beide Heatmaps nutzen Spearman; variiert wird nur der Zeitausschnitt. "
+        "Werte nahe +1 oder −1 bedeuten starke Zusammenhänge, Werte nahe 0 keine. "
+        "Aufschlussreich ist der Vergleich beider Panels: Wird ein Wert im Sommer "
+        "kleiner, steckte ein großer Teil davon im Saisonkontrast."
+    )
+    fig_korr = co.korrelationsmatrix_ganzjahr_vs_sommer(dfOrginal)
+    st.pyplot(fig_korr)
+
+    with st.expander("Wie ist die Matrix zu lesen?"):
+        st.markdown(
+            "- **Diagonale = 1.0:** Jede Variable korreliert perfekt mit sich selbst.\n"
+            "- **O₃ ↔ Temperatur / Sonnenschein:** positiver Zusammenhang erwartet "
+            "(Ozonbildung unter Sonneneinstrahlung).\n"
+            "- **O₃ ↔ NO₂:** negativer Zusammenhang erwartet (Titrationseffekt – "
+            "NO₂ baut Ozon ab).\n"
+            "- **Ganzjahr vs. Sommer:** Wird ein Wert im Sommer kleiner, steckte ein "
+            "großer Teil im Saisonkontrast (Varianzeinschränkung) – nicht in der "
+            "Photochemie selbst."
+        )
+
+    st.markdown("##### Langzeittrend als Korrelationszahl (Jahresmittel)")
+    st.table(co.langzeit_korrelation_jahresmittel(dfOrginal).round(2))
+
+    with st.expander("ℹ️ Methodische Einordnung: Was eine Korrelationszahl hier (nicht) sagt"):
+        st.markdown("""
+        Eine Korrelation über rohe Stundenwerte von 1980–2024 wirkt wie *eine* Zahl,
+        vermischt aber **drei Zusammenhänge auf unterschiedlichen Zeitskalen** zu
+        einem einzigen Koeffizienten:
+
+        - **Tagesskala (Stunde zu Stunde):** der Titrationseffekt – morgens hohes NO₂
+        aus dem Verkehr, gleichzeitig niedriges O₃.
+        - **Saisonskala (Monat zu Monat):** Sommer-Ozon (Sonne, Hitze) gegen
+        Winter-NO₂ (Heizung, Inversionswetterlagen).
+        - **Langzeitskala (Jahr zu Jahr):** sinkendes NO₂ (Filter, Abgasnormen,
+        Umweltzonen) gegen steigendes O₃ (Klimawandel).
+
+        **Was kann eine einzelne Zahl dabei täuschen?**
+
+        - **Die Varianz dominiert die Zahl.** Tagesgang und Saison schwanken stark,
+        der Klimatrend driftet nur sanft über Jahrzehnte. In den ~394.000 Stunden
+        ist die Klimadrift gegenüber dem täglichen Auf und Ab fast unsichtbar – die
+        gepoolte Zahl spiegelt also v. a. *Wetter*, kaum *Klima*.
+        - **Korrelation ist immer bedingt.** Es gibt keine „neutrale" Korrelation, die
+        man nur dokumentiert. Jede Zahl gilt für genau die Teilmenge, über die sie
+        gerechnet wird. Ein Sommer-Ausschnitt ist daher keine *Bereinigung*, sondern
+        eine *Bedingung*: „Wie kovariieren die Größen **im Sommer**?"
+        - **Korrelation ≠ Kausalität.** Die negative O₃↔NO₂-Beziehung *sieht* aus wie
+        „NO₂ senkt O₃", ist aber das statistische Echo eines chemischen Prozesses
+        (Titration) plus räumlicher Verteilung (Stadt/Land). Das Muster zeigt die
+        Matrix – die Ursache liefert die Chemie.
+
+        **Was der Sommerfilter leistet (und was nicht):** Er entfernt die
+        **Saison-Achse** und beantwortet gezielt die Frage, wie die Größen *innerhalb
+        des Sommerregimes* kovariieren. Tagesgang und Langzeittrend bleiben dabei in
+        den Stundenwerten enthalten. Wichtig: Die Sommer-Koeffizienten werden dadurch
+        oft **kleiner**, nicht größer – z. B. O₃↔Sonnenscheindauer von 0,37 (Jahr) auf
+        0,27 (Sommer). Das ist kein Widerspruch zur Photochemie, sondern
+        **Varianzeinschränkung**: Im Sommer sind Sonne und Ozon ohnehin durchweg hoch,
+        der Wertebereich ist schmal – und ein schmaler Wertebereich senkt den
+        Koeffizienten, obwohl der physikalische Zusammenhang derselbe bleibt. Der
+        Rückgang misst damit direkt, **wie viel die Saison-Achse zu diesem Paar
+        beigetragen hat**. Der Unterschied beider Matrizen ist also selbst die Aussage –
+        richtungsneutral gelesen: er zeigt den Saisonbeitrag, mal verstärkend, meist
+        dämpfend.
+
+        **Und der Klimatrend?** Den kann die Matrix **prinzipiell nicht zeigen**, weil
+        sie keine Zeitachse enthält – es gibt keine Zelle, die „Jahr zu Jahr" abbilden
+        könnte. Die O₃↔Temperatur-Zelle wirkt zwar wie ein Klimasignal, entsteht aber
+        fast vollständig aus Tag- und Saison-Kovariation (warme Nachmittage ↔ viel
+        Ozon, *jetzt*), nicht aus der Erwärmung über 44 Jahre. Sichtbar wird der Trend
+        erst auf **Jahresmittel-Ebene** (siehe Tabelle direkt darüber sowie die
+        Liniencharts oben): Dort fallen Tagesgang und Saison weg, und O₃ wie Temperatur
+        zeigen eine klar positive, NO₂ eine klar negative Korrelation mit der Zeit.
+
+        **Fazit:** Die Matrix ist ein **Diagnose- und Hypothesen-Werkzeug**, kein
+        Beweis. Sie zeigt, *wo* Zusammenhänge bestehen und auf welcher Zeitebene sie
+        entstehen – nicht *warum*. Genau hier setzen die folgenden Tabs (Regression,
+        Random Forest) an, um Wirkrichtung und Nichtlinearität zu prüfen.
+        """)
+
+
 @st.fragment
 def showTab4():
     """
@@ -543,141 +680,71 @@ Diese Darstellung visualisiert den chemischen Abbau von Ozon durch Stickstoffdio
         verläuft glatter.
         """)
 
+@st.fragment
 def showTab5() -> None:
     """
-    Tab 5 – Korrelationsanalyse: Methodenvergleich und Heatmap.
+    Tab 5 – Verteilung & Form: Ozon-Paradoxon und Nichtlinearität.
 
-    Erklärt Unterschiede zwischen Pearson-, Spearman- und Kendall-Korrelation
-    und zeigt eine nebeneinandergestellte Korrelationsmatrix (Spearman | Pearson)
-    für Wetter- und Schadstoffvariablen (Nürnberg 1980–2024). Spearman ist die
-    Hauptaussage: robust gegen Ausreißer, erfasst monotone nichtlineare Zusammenhänge.
+    Zeigt das Paradoxon als Verteilung (Boxplot O₃ Stadt vs. Land je Jahreszeit)
+    und die Form des O₃-Temperatur-Zusammenhangs (Hexbin + Bin-Mittel-Kurve),
+    die die nichtlineare Sättigung sichtbar macht – Brücke zu Regression und
+    Random Forest.
     """
-    st.header("Methoden der Korrelationsanalyse: Welches Modell ist das richtige?")
-
+    st.header("Verteilung & Form: das Paradoxon jenseits der Mittelwerte")
     st.write(
-        "Um den Einfluss von Variablen wie NO₂, Temperatur und Luftfeuchtigkeit auf die "
-        "Ozonentwicklung wissenschaftlich fundiert zu analysieren, ist die Wahl des "
-        "passenden Korrelationskoeffizienten entscheidend."
+        "Eine einzelne Kennzahl verschluckt zwei Dinge, die für diese Geschichte "
+        "zentral sind: die *Verteilung* der Werte über die Jahreszeiten und die "
+        "*Form* des Zusammenhangs. Beides holen Boxplot und Streudiagramm zurück."
     )
     st.markdown("---")
-    st.markdown("#### Vergleich der Korrelationsmodelle")
 
-    df_methoden = pd.DataFrame(
-        {
-            "Methode": ["Pearson", "Spearman", "Kendall"],
-            "Eignung & Charakteristik": [
-                "Klassisch; setzt lineare Zusammenhänge und normalverteilte Daten voraus.",
-                "Empfohlen: Robust gegen Ausreißer; erkennt auch nichtlineare, monotone Trends.",
-                "Konservativ; sehr zuverlässig bei kleinen Stichproben oder vielen gleichen Werten.",
-            ],
-            "Fokus": [
-                "Stärke des linearen Zusammenhangs.",
-                "Stärke der Rangfolge-Beziehung.",
-                "Konkordanz von Datenpaaren.",
-            ],
-        }
+    # --- Boxplot: Ozon-Paradoxon als Verteilung ---
+    st.subheader("Ozon-Tagesmaxima: Stadt vs. Land je Jahreszeit")
+    df_land_tagesmax = load_tiefenbach_tagesmax()
+    st.pyplot(co.box_ozon_stadt_land_nach_saison(dfOrginal, df_land_tagesmax))
+    st.caption(
+        "Ozon ist ein Sommerphänomen. Das städtische Tagesmaximum schwankt stark "
+        "übers Jahr, während das Land ganzjährig auf ähnlichem Niveau bleibt – der "
+        "Stadt-Land-Abstand ist daher im Winterhalbjahr groß und im Sommer klein. "
+        "Die Box zeigt zugleich die Streuung, die ein Mittelwert verbirgt."
     )
 
-    st.table(df_methoden.set_index("Methode"))
-
-    st.markdown("#### Erläuterung der Unterschiede")
-
-    st.markdown(
-        "**Pearson:** Dieses Modell misst, wie stark sich zwei Variablen linear zueinander "
-        "verhalten. Da atmosphärische Daten jedoch häufig durch extreme Spitzenwerte "
-        "(z. B. Rushhour-Emissionen) geprägt sind, kann Pearson hier leicht zu verfälschten "
-        "Ergebnissen führen, wenn die Daten nicht strikt normalverteilt sind."
-    )
-
-    st.markdown(
-        "**Spearman:** Anstatt absolute Werte zu nutzen, arbeitet Spearman mit Rängen. Das "
-        "macht das Modell extrem robust gegenüber Ausreißern. Da chemische Prozesse in der "
-        "Atmosphäre (wie die Ozonbildung) oft nicht linear verlaufen, sondern bei bestimmten "
-        "Schwellenwerten sättigen, erfasst Spearman diese dynamischen Zusammenhänge deutlich "
-        "präziser."
-    )
-
-    st.markdown(
-        "**Kendall:** Kendall ist die statistisch „strengere\" Variante. Sie ist besonders "
-        "dann nützlich, wenn man die Konsistenz der Zusammenhänge in sehr kleinen Datensätzen "
-        "prüfen möchte. Bei großen Zeitreihen (wie UBA/LfU-Daten) liefern Spearman "
-        "und Kendall meist ähnliche Erkenntnisse, wobei Spearman rechnerisch effizienter ist."
-    )
-    st.markdown("---")
-    fig = co.korrelationsmatrix_ganzjahr_vs_sommer(dfOrginal)
-    st.pyplot(fig)
-
-    with st.expander("Wie ist die Matrix zu lesen?"):
+    with st.expander("Wie ist der Boxplot zu lesen?"):
         st.markdown(
-            "- **Diagonale = 1.0:** Jede Variable korreliert perfekt mit sich selbst.\n"
-            "- **O₃ ↔ Temperatur / Sonnenschein:** positiver Zusammenhang erwartet "
-            "(Ozonbildung unter Sonneneinstrahlung).\n"
-            "- **O₃ ↔ NO₂:** negativer Zusammenhang erwartet (Titrationseffekt – "
-            "NO₂ baut Ozon ab).\n"
-            "- **Spearman vs. Pearson:** Weicht Spearman deutlich von Pearson ab, "
-            "ist der Zusammenhang monoton, aber nicht linear."
+            "- **Box:** mittlere 50 % der Tageswerte (25.–75. Perzentil), "
+            "Linie = Median.\n"
+            "- **Whisker:** Spannweite bis zum 1,5-fachen Interquartilsabstand.\n"
+            "- **Stadt vs. Land:** Der Abstand ist saisonabhängig – im Herbst und "
+            "Winter liegt das Land klar höher, im Frühling und Sommer gleichen sich "
+            "beide an. Im Winterhalbjahr drückt das hohe städtische NO₂ (Heizung, "
+            "Inversionswetterlagen) das Stadt-Ozon per Titration nach unten; im "
+            "Sommer überwiegt die Photochemie und der Abstand schrumpft.\n"
+            "- **Vergleichsbasis:** Tagesmaxima 2016–2025, beide Stationen auf "
+            "derselben Aggregationsebene."
         )
 
-    st.markdown("##### Langzeittrend als Korrelationszahl (Jahresmittel)")
-    st.table(co.langzeit_korrelation_jahresmittel(dfOrginal).round(2))
+    st.markdown("---")
 
-   
-    with st.expander("ℹ️ Methodische Einordnung: Was eine Korrelationszahl hier (nicht) sagt"):
-        st.markdown("""
-        Eine Korrelation über rohe Stundenwerte von 1980–2024 wirkt wie *eine* Zahl,
-        vermischt aber **drei Zusammenhänge auf unterschiedlichen Zeitskalen** zu
-        einem einzigen Koeffizienten:
+    # --- Scatter: Form / Nichtlinearität ---
+    st.subheader("Ozon vs. Temperatur: die Form des Zusammenhangs")
+    st.pyplot(co.scatter_ozon_temperatur(dfOrginal))
+    st.caption(
+        "Die mittlere O₃-Kurve steigt mit der Temperatur und flacht bei großer "
+        "Hitze ab – ein nichtlinearer, sättigender Verlauf."
+    )
 
-        - **Tagesskala (Stunde zu Stunde):** der Titrationseffekt – morgens hohes NO₂
-        aus dem Verkehr, gleichzeitig niedriges O₃.
-        - **Saisonskala (Monat zu Monat):** Sommer-Ozon (Sonne, Hitze) gegen
-        Winter-NO₂ (Heizung, Inversionswetterlagen).
-        - **Langzeitskala (Jahr zu Jahr):** sinkendes NO₂ (Filter, Abgasnormen,
-        Umweltzonen) gegen steigendes O₃ (Klimawandel).
+    with st.expander("Warum dieser Plot die Brücke zum Random Forest ist"):
+        st.markdown(
+            "- **Hexbin statt Punkte:** Bei ~394.000 Stunden würde ein roher Scatter "
+            "zum schwarzen Klumpen. Die Farbskala (logarithmisch) zeigt, *wo* die "
+            "Masse der Messungen liegt.\n"
+            "- **Bin-Mittel-Kurve:** verbindet den durchschnittlichen O₃-Wert je "
+            "Temperatur-Bin und macht die Form sichtbar.\n"
+            "- **Nichtlinearität:** Die Abflachung bei Hitze kann ein lineares "
+            "Modell (OLS) nicht abbilden – genau hier gewinnt der Random Forest, "
+            "wie der R²-Sprung im Tab „Random Forest“ zeigt."
+        )
 
-        **Was kann eine einzelne Zahl dabei täuschen?**
-
-        - **Die Varianz dominiert die Zahl.** Tagesgang und Saison schwanken stark,
-        der Klimatrend driftet nur sanft über Jahrzehnte. In den ~394.000 Stunden
-        ist die Klimadrift gegenüber dem täglichen Auf und Ab fast unsichtbar – die
-        gepoolte Zahl spiegelt also v. a. *Wetter*, kaum *Klima*.
-        - **Korrelation ist immer bedingt.** Es gibt keine „neutrale" Korrelation, die
-        man nur dokumentiert. Jede Zahl gilt für genau die Teilmenge, über die sie
-        gerechnet wird. Ein Sommer-Ausschnitt ist daher keine *Bereinigung*, sondern
-        eine *Bedingung*: „Wie kovariieren die Größen **im Sommer**?"
-        - **Korrelation ≠ Kausalität.** Die negative O₃↔NO₂-Beziehung *sieht* aus wie
-        „NO₂ senkt O₃", ist aber das statistische Echo eines chemischen Prozesses
-        (Titration) plus räumlicher Verteilung (Stadt/Land). Das Muster zeigt die
-        Matrix – die Ursache liefert die Chemie.
-
-        **Was der Sommerfilter leistet (und was nicht):** Er entfernt die
-        **Saison-Achse** und beantwortet gezielt die Frage, wie die Größen *innerhalb
-        des Sommerregimes* kovariieren. Tagesgang und Langzeittrend bleiben dabei in
-        den Stundenwerten enthalten. Wichtig: Die Sommer-Koeffizienten werden dadurch
-        oft **kleiner**, nicht größer – z. B. O₃↔Sonnenscheindauer von 0,37 (Jahr) auf
-        0,27 (Sommer). Das ist kein Widerspruch zur Photochemie, sondern
-        **Varianzeinschränkung**: Im Sommer sind Sonne und Ozon ohnehin durchweg hoch,
-        der Wertebereich ist schmal – und ein schmaler Wertebereich senkt den
-        Koeffizienten, obwohl der physikalische Zusammenhang derselbe bleibt. Der
-        Rückgang misst damit direkt, **wie viel die Saison-Achse zu diesem Paar
-        beigetragen hat**. Der Unterschied beider Matrizen ist also selbst die Aussage –
-        richtungsneutral gelesen: er zeigt den Saisonbeitrag, mal verstärkend, meist
-        dämpfend.
-
-        **Und der Klimatrend?** Den kann diese Matrix **prinzipiell nicht zeigen**, weil
-        sie keine Zeitachse enthält – es gibt keine Zelle, die „Jahr zu Jahr" abbilden
-        könnte. Die O₃↔Temperatur-Zelle wirkt zwar wie ein Klimasignal, entsteht aber
-        fast vollständig aus Tag- und Saison-Kovariation (warme Nachmittage ↔ viel
-        Ozon, *jetzt*), nicht aus der Erwärmung über 44 Jahre. Sichtbar wird der Trend
-        erst auf **Jahresmittel-Ebene** (siehe Tabelle oben bzw. Tab „Explorative
-        Analyse"): Dort fallen Tagesgang und Saison weg, und O₃ wie Temperatur zeigen
-        eine klar positive, NO₂ eine klar negative Korrelation mit der Zeit.
-
-        **Fazit:** Die Matrix ist ein **Diagnose- und Hypothesen-Werkzeug**, kein
-        Beweis. Sie zeigt, *wo* Zusammenhänge bestehen und auf welcher Zeitebene sie
-        entstehen – nicht *warum*. Genau hier setzen die folgenden Tabs (Regression,
-        Random Forest) an, um Wirkrichtung und Nichtlinearität zu prüfen.
-        """)
 
 @st.fragment
 def showTab6() -> None:
@@ -916,7 +983,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "Datenbasis",
     "Explorative Analyse",
     "Das Ozon-Paradoxon",
-    "Korrelationsanalyse",
+    "Verteilung & Form",
     "Multiple Regression",
     "Random Forest",
     "News-API",

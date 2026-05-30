@@ -270,23 +270,29 @@ Für eine spätere Cloud-Überführung legt Parquet bereits das Fundament: Serve
 
 Das analytische Herzstück folgt einer bewussten Eskalationslogik – jedes Modell beantwortet eine Frage, an deren Grenze das nächste ansetzt.
 
-### 9.a. Korrelationsanalyse (Spearman statt Pearson)
+### 9.a. Korrelationsanalyse (Spearman, Ganzjahr vs. Sommerregime)
 
-Als Einstieg wurde geprüft, *welche* Variablen mit Ozon zusammenhängen. Bewusst stand **Spearman** im Vordergrund: Da atmosphärische Daten Ausreißer (Rushhour-Spitzen, Hitzetage) enthalten und die Ozonbildung nichtlinear sättigt, ist die rangbasierte Spearman-Korrelation robuster als Pearson. Die Gegenüberstellung beider Matrizen ist dabei selbst eine Aussage: Wo Spearman und Pearson auseinanderlaufen, ist der Zusammenhang monoton, aber nicht linear.
+Als Einstieg wurde geprüft, *welche* Variablen mit Ozon zusammenhängen. Bewusst stand **Spearman** im Vordergrund: Da atmosphärische Daten Ausreißer (Rushhour-Spitzen, Hitzetage) enthalten und die Ozonbildung nichtlinear sättigt, ist die rangbasierte Spearman-Korrelation robuster als Pearson. Statt zweier Methoden werden zwei **Zeitausschnitte** gegenübergestellt – die Matrix über das gesamte Jahr neben der nur über die Sommermonate (Jun–Aug). Der Sommerfilter entfernt die Saison-Achse; der Vergleich beider Matrizen ist dabei selbst die Aussage.
 
-### 9.b. Multiple lineare Regression (OLS)
+> **Data Science Insight (Zeitskalen & Varianzeinschränkung):** Eine Korrelation über rohe Stundenwerte mischt drei Zeitskalen (Tagesgang, Saison, Langzeittrend) in eine Zahl, die von der größten Varianzquelle – dem täglichen und saisonalen Auf und Ab – dominiert wird. Der Klimatrend ist darin praktisch unsichtbar; die Matrix besitzt gar keine Zeitachse. Sichtbar wird der Trend erst auf **Jahresmittel-Ebene** (O₃ und Temperatur klar positiv, NO₂ klar negativ mit dem Jahr korreliert). Zudem werden die Sommer-Koeffizienten oft *kleiner* als die des Gesamtjahres (z. B. O₃ ↔ Sonnenscheindauer) – kein Widerspruch zur Photochemie, sondern **Varianzeinschränkung** bei schmalem Wertebereich. Dieser Block liegt deshalb bewusst im Tab „Explorative Analyse", nicht als eigenständige Modellstufe.
+
+### 9.b. Verteilung & Form (Boxplot und Hexbin-Streudiagramm)
+
+Bevor Modelle geschätzt werden, machen zwei Visualisierungen sichtbar, was eine einzelne Korrelationszahl verschluckt. Der **Boxplot** der O₃-Tagesmaxima (Stadt vs. Land je Jahreszeit) zeigt das Paradoxon als *Verteilung*: Das städtische Maximum schwankt stark übers Jahr, das Land bleibt ganzjährig stabil – der Stadt-Land-Abstand ist also saisonabhängig, im Winterhalbjahr groß, im Sommer klein. Das **Hexbin-Streudiagramm** O₃ vs. Temperatur löst das Overplotting der ~394.000 Punkte über eine logarithmische Dichtekarte auf; die überlagerte Bin-Mittelwert-Kurve macht die *Form* sichtbar: O₃ steigt mit der Temperatur und flacht bei großer Hitze ab. Genau diese Sättigung ist die visuelle Brücke zum Random Forest – die Krümmung, die ein lineares Modell nicht abbilden kann.
+
+### 9.c. Multiple lineare Regression (OLS)
 
 Im zweiten Schritt wurde quantifiziert, *wie stark* jeder Faktor wirkt. Zwei Modelle wurden verglichen – nur Wetter vs. Wetter + Schadstoffe –, um den Erklärungsbeitrag der Schadstoffe sichtbar zu machen (R² ≈ 0,58 → 0,65). Die **Standardisierung der Prädiktoren (z-Scores)** macht die Koeffizienten trotz unterschiedlicher Einheiten direkt vergleichbar.
 
 > **Data Science Insight (Multikollinearität):** Das kontraintuitiv negative Vorzeichen der Sonnenscheindauer ist kein Fehler, sondern Folge der starken Kopplung an die Temperatur – der „Sonnen-Effekt" wird vom Temperatur-Koeffizienten aufgenommen. Ein wichtiges Beispiel dafür, dass Regressionskoeffizienten *bedingte* Effekte sind und nicht isoliert interpretiert werden dürfen.
 
-### 9.c. Random Forest (nichtlinear)
+### 9.d. Random Forest (nichtlinear)
 
 Das verbleibende, von OLS unerklärte Drittel der Varianz motiviert das nichtlineare Modell. Der Random Forest hebt das Test-R² spürbar an (≈ 0,65 → 0,78) und liefert über die **Feature Importance** eine Treiber-Rangfolge. Der direkte R²-Vergleich OLS vs. RF schließt die Storyline: Die Verbesserung *ist* der empirische Beleg für die Nichtlinearität der Ozonbildung.
 
 > **Data Science Insight (Interpretation der Importance):** Feature Importance misst den Beitrag zur *Vorhersagegüte*, nicht die *Wirkrichtung* – ob ein Faktor O₃ erhöht oder senkt, zeigen erst die OLS-Koeffizienten. Zudem kann die Importance bei korrelierten Prädiktoren (Temperatur ↔ Sonnenschein) verzerren, da der Wald die Wichtigkeit zwischen austauschbaren Variablen aufteilt. Beide Modelle ergänzen sich daher: OLS für die Richtung, RF für die Vorhersage.
 
-### 9.d. Performance-Entscheidung: `@st.cache_resource`
+### 9.e. Performance-Entscheidung: `@st.cache_resource`
 
 Das RF-Training auf ~250.000 Zeilen ist zu teuer, um es bei jedem Rerun zu wiederholen. Lösung: Das **trainierte Modell** wird über `@st.cache_resource` (nicht `cache_data`) gecacht – passend, weil ein Modell eine nicht-serialisierbare Ressource ist. Der große DataFrame wird über den Parameternamen `_df` (führender Unterstrich) bewusst vom Hashing ausgenommen. Das Training läuft so genau einmal pro Session, danach reagiert der Tab unmittelbar.
 

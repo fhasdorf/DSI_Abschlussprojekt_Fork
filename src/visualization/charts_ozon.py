@@ -499,6 +499,171 @@ def titration_wettergematcht(
     df_merged = _baue_titrationsdaten(df_stadt, df_land)
     return _titration_zweitageplot(df_merged, tage)
 
+def box_ozon_stadt_land_nach_saison(
+    df_stadt: pd.DataFrame,
+    df_land: pd.DataFrame,
+    jahr_von: int = 2016,
+    jahr_bis: int = 2025,
+) -> plt.Figure:
+    """
+    Boxplot: O₃-Tagesmaxima nach Jahreszeit, gruppiert nach Stadt (Nürnberg)
+    und Land (Tiefenbach).
+
+    Zeigt das Ozon-Paradoxon als VERTEILUNG statt als Mittelwert: je Jahreszeit
+    stehen zwei Boxen (Stadt/Land) nebeneinander. Sichtbar werden damit (a) Ozon
+    als ausgeprägtes Sommerphänomen und (b) den saisonabhängigen Stadt-Land-
+    Abstand: Das städtische Tagesmaximum schwankt stark übers Jahr, das Land
+    bleibt ganzjährig stabil – der Abstand ist im Winterhalbjahr groß, im
+    Sommer klein – inklusive Streuung und Ausreißern, die ein einzelner
+    Mittelwert verschluckt.
+
+    Vergleichsbasis sind Tagesmaxima beider Stationen im Überlappungszeitraum
+    2016–2025: Das Land liegt nur als Tagesmax vor, die Stadt wird aus den
+    Stundenwerten entsprechend zu Tagesmaxima aggregiert. So stehen beide
+    Stationen auf derselben Aggregationsebene.
+
+    Parameters
+    ----------
+    df_stadt : pd.DataFrame
+        Stündliche Nürnberg-Daten (data.parquet). Benötigt: ``datum``, ``o3``.
+    df_land : pd.DataFrame
+        O₃-Tagesmaxima Tiefenbach
+        (o3_dailymax_2016_2025_station_tiefenbach_bayern.parquet).
+        Benötigt: ``datum``, ``o3_land``.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    # -- Stadt: Stundenwerte -> Tagesmaxima --------------------------------
+    df_s = df_stadt[["datum", "o3"]].copy()
+    df_s["datum"] = pd.to_datetime(df_s["datum"])
+    df_s = df_s[(df_s["datum"].dt.year >= jahr_von) & (df_s["datum"].dt.year <= jahr_bis)]
+    df_s = df_s.dropna(subset=["o3"])
+    df_s["tag"] = df_s["datum"].dt.normalize()
+    df_s = df_s.groupby("tag")["o3"].max().reset_index()
+    df_s = df_s.rename(columns={"tag": "datum", "o3": "wert"})
+    df_s["saison"] = df_s["datum"].dt.month.map(_saison_aus_monat)
+
+    # -- Land: liegt bereits als Tagesmax vor ------------------------------
+    df_l = df_land[["datum", "o3_land"]].copy()
+    df_l["datum"] = pd.to_datetime(df_l["datum"])
+    df_l = df_l[(df_l["datum"].dt.year >= jahr_von) & (df_l["datum"].dt.year <= jahr_bis)]
+    df_l = df_l.dropna(subset=["o3_land"]).rename(columns={"o3_land": "wert"})
+    df_l["saison"] = df_l["datum"].dt.month.map(_saison_aus_monat)
+
+    # -- Plot: je Saison zwei Boxen (Stadt links, Land rechts) -------------
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    breite = 0.3
+    offset = 0.2
+    farbe_stadt = COLORS["text_muted"]   # konsistent mit ozonparadoxon()
+    farbe_land  = COLORS["good"]
+
+    for i, saison in enumerate(SAISON_REIHENFOLGE):
+        werte_stadt = df_s.loc[df_s["saison"] == saison, "wert"].values
+        werte_land  = df_l.loc[df_l["saison"] == saison, "wert"].values
+
+        if len(werte_stadt):
+            bp_s = ax.boxplot(werte_stadt, positions=[i - offset], widths=breite,
+                              patch_artist=True, showfliers=False)
+            for box in bp_s["boxes"]:
+                box.set_facecolor(farbe_stadt); box.set_alpha(0.85)
+            for med in bp_s["medians"]:
+                med.set_color(COLORS["text"]); med.set_linewidth(1.5)
+
+        if len(werte_land):
+            bp_l = ax.boxplot(werte_land, positions=[i + offset], widths=breite,
+                              patch_artist=True, showfliers=False)
+            for box in bp_l["boxes"]:
+                box.set_facecolor(farbe_land); box.set_alpha(0.85)
+            for med in bp_l["medians"]:
+                med.set_color(COLORS["text"]); med.set_linewidth(1.5)
+
+    ax.set_xticks(range(len(SAISON_REIHENFOLGE)))
+    ax.set_xticklabels(SAISON_REIHENFOLGE)
+    ax.set_ylabel("O₃-Tagesmaximum (µg/m³)")
+    ax.set_title(
+        "Ozon-Paradoxon als Verteilung: Stadt vs. Land je Jahreszeit\n"
+        f"Tagesmaxima {jahr_von}–{jahr_bis} – Stadt stark saisonabhängig, Land ganzjährig stabil",
+        fontsize=14, fontweight="bold", pad=12,
+    )
+    ax.grid(True, axis="y", linestyle=":", alpha=0.6)
+
+    legenden_handles = [
+        mpatches.Patch(facecolor=farbe_stadt, alpha=0.85, label="Stadt – Nürnberg"),
+        mpatches.Patch(facecolor=farbe_land,  alpha=0.85, label="Land – Tiefenbach"),
+    ]
+    ax.legend(handles=legenden_handles, loc="upper right", frameon=False)
+
+    fig.tight_layout()
+    return fig
+
+
+def scatter_ozon_temperatur(df: pd.DataFrame, anzahl_bins: int = 20) -> plt.Figure:
+    """
+    Hexbin-Dichte O₃ vs. Temperatur mit überlagerter Bin-Mittelwert-Kurve.
+
+    Bei ~394.000 Stundenpunkten würde ein rohes Streudiagramm zum schwarzen
+    Klumpen (Overplotting). Stattdessen zeigt eine Hexbin-Dichte (logarithmisch
+    skaliert), WO die Masse der Punkte liegt; die überlagerte Linie verbindet
+    die mittleren O₃-Werte je Temperatur-Bin und macht die FORM des
+    Zusammenhangs sichtbar.
+
+    Kernaussage: Der Zusammenhang ist nichtlinear – O₃ steigt mit der Temperatur
+    und flacht bei großer Hitze ab (Sättigung). Genau diese Krümmung bleibt in
+    einer einzelnen Korrelationszahl unsichtbar und begründet, warum der Random
+    Forest (folgende Tabs) den linearen OLS schlägt.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Stundenwerte aus data.parquet. Benötigt: ``temperatur``, ``o3``.
+    anzahl_bins : int
+        Anzahl der Temperatur-Bins für die Mittelwert-Kurve.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    sub = df[["temperatur", "o3"]].dropna()
+
+    fig, ax = plt.subplots(figsize=(11, 7))
+
+    # -- Punktdichte als Hexbin (log-Skala gegen Overplotting) -------------
+    hb = ax.hexbin(
+        sub["temperatur"], sub["o3"],
+        gridsize=45, bins="log", cmap="viridis", mincnt=1,
+    )
+    cbar = fig.colorbar(hb, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Anzahl Stunden (log)", fontsize=10)
+
+    # -- Bin-Mittelwerte: Form des Zusammenhangs ---------------------------
+    bins = pd.cut(sub["temperatur"], bins=anzahl_bins)
+    gruppe = sub.groupby(bins, observed=True)["o3"].agg(["mean", "count"])
+    gruppe["mitte"] = [iv.mid for iv in gruppe.index]
+    # nur Bins mit genug Punkten -> stabile Mittel an den Temperatur-Rändern
+    gruppe = gruppe[gruppe["count"] >= 50]
+
+    ax.plot(
+        gruppe["mitte"], gruppe["mean"],
+        color=COLORS["bad"], linewidth=2.5, marker="o", markersize=5,
+        label="Ø O₃ je Temperatur-Bin",
+    )
+
+    ax.set_xlabel("Temperatur (°C)")
+    ax.set_ylabel("O₃ (µg/m³)")
+    ax.set_title(
+        "Ozon vs. Temperatur: nichtlinearer Zusammenhang\n"
+        "Punktdichte (Hexbin) + mittlere O₃-Kurve je Temperatur-Bin",
+        fontsize=14, fontweight="bold", pad=12,
+    )
+    ax.legend(loc="upper left", frameon=False)
+
+    fig.tight_layout()
+    return fig
+
+
 def korrelationsmatrix_ganzjahr_vs_sommer(df: pd.DataFrame) -> plt.Figure:
     """
     Zeichnet zwei Spearman-Korrelations-Heatmaps nebeneinander:
