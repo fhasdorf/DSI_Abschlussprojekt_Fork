@@ -1,6 +1,4 @@
 ## Vorwort
-
-## Vorwort
  
 Dieses Projekt entstand als Abschlussarbeit der Data-Science-Fortbildung am
 **Data Science Institute Berlin**. Ein herzlicher Dank gilt dem Institut für
@@ -239,7 +237,6 @@ Die Daten werden im RAM hierarchisch in drei Stufen gefiltert:
 |---|---|---|
 | **1 – Global** | App-Start | Gesamtdatensatz (~394.000 Zeilen) wird via `@st.cache_data` unveränderlich gecacht |
 | **2 – User-Interaktion** | Slider-Bewegung | `df_year = dfOrginal[...].copy()` erstellt eine isolierte Jahreskopie im RAM |
-| **3 – Lokal im Tab** | Radio-Button-Klick | `if-elif`-Logik greift auf das bereits vorgefilterte `df_year` zu |
 
 
 ---
